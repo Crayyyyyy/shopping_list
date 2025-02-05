@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shopping_list/objects/item.dart';
+import 'package:http/http.dart' as http;
 
 class ScreenNewItem extends StatelessWidget {
   ScreenNewItem({super.key})
@@ -13,9 +16,26 @@ class ScreenNewItem extends StatelessWidget {
 
   final _formKey = GlobalKey<FormState>();
 
-  void _saveItem(BuildContext context) {
+  void _saveItem(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      Uri url = Uri.https(
+          'shopify-5803a-default-rtdb.europe-west1.firebasedatabase.app',
+          "shopping-list.json");
+
+      await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: json.encode(
+          {
+            "title": itemForm.title,
+            "quantity": itemForm.quantity,
+            "name": itemForm.category.name,
+          },
+        ),
+      );
+
+      if (!context.mounted) return;
       Navigator.of(context).pop(itemForm);
     }
   }
