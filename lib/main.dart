@@ -27,6 +27,11 @@ class ShoppingApp extends StatelessWidget {
               fontSize: 26,
             ),
           ),
+          iconButtonTheme: IconButtonThemeData(
+              style: ButtonStyle(
+            iconSize: WidgetStateProperty.all(28.0),
+            iconColor: WidgetStateProperty.all(kColorScheme.onPrimary),
+          )),
           textTheme: TextTheme().copyWith(
             labelSmall: TextStyle(
               color: kColorScheme.primary,

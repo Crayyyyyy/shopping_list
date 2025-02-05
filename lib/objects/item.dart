@@ -27,13 +27,13 @@ Map<Category, Color> categoryColors = {
 class Item {
   Item({
     required this.title,
-    required this.price,
+    required this.quantity,
     required this.category,
     this.color = Colors.black,
   });
 
   String title;
-  double price;
+  int quantity;
   Color color;
   Category category;
 }
