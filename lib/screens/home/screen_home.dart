@@ -10,7 +10,17 @@ class ScreenHome extends StatefulWidget {
 }
 
 class _ScreenHomeState extends State<ScreenHome> {
-  final List<Item> items = [];
+  final List<Item> items = [
+    Item(title: "Pork", quantity: 4, category: Category.meat),
+    Item(title: "Chicken", quantity: 5, category: Category.meat),
+    Item(title: "Beef", quantity: 8, category: Category.meat),
+    Item(title: "Salmon", quantity: 13, category: Category.fish),
+    Item(title: "Tuna", quantity: 10, category: Category.fish),
+    Item(title: "Broccoli", quantity: 2, category: Category.vegetable),
+    Item(title: "Carrot", quantity: 2, category: Category.vegetable),
+    Item(title: "Potato", quantity: 1, category: Category.vegetable),
+    Item(title: "Tomato", quantity: 3, category: Category.vegetable),
+  ];
 
   void routeCreateNewItem(BuildContext context) async {
     Item? temp = await Navigator.of(context).push(
@@ -28,7 +38,25 @@ class _ScreenHomeState extends State<ScreenHome> {
     }
   }
 
-  void routeEditItem(BuildContext context, Item item) {}
+  void routeEditItem(BuildContext context, Item item) async {
+    int index = items.indexOf(item);
+    items.remove(item);
+    Item? temp = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) {
+          return ScreenNewItem.edit(itemForm: item);
+        },
+      ),
+    );
+
+    if (temp != null) {
+      setState(() {
+        items.insert(index, temp);
+      });
+    } else {
+      items.insert(index, item);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +75,11 @@ class _ScreenHomeState extends State<ScreenHome> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            for (Item item in items) ItemTile(item: item),
+            for (Item item in items)
+              ItemTile(
+                item: item,
+                longPress: routeEditItem,
+              ),
           ],
         ),
       ),
@@ -56,7 +88,9 @@ class _ScreenHomeState extends State<ScreenHome> {
 }
 
 class ItemTile extends StatelessWidget {
-  const ItemTile({super.key, required this.item});
+  const ItemTile({super.key, required this.item, required this.longPress});
+
+  final Function(BuildContext, Item) longPress;
 
   final Item item;
 
@@ -83,7 +117,9 @@ class ItemTile extends StatelessWidget {
       ),
       key: ObjectKey(item),
       child: ListTile(
-        onLongPress: () {},
+        onLongPress: () {
+          longPress(context, item);
+        },
         leading: Container(
           width: 20,
           height: 20,
@@ -91,6 +127,8 @@ class ItemTile extends StatelessWidget {
         ),
         title: Text(
           item.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         trailing: Text('${item.quantity} x'),

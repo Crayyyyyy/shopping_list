@@ -2,26 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:shopping_list/objects/item.dart';
 
 class ScreenNewItem extends StatelessWidget {
-  ScreenNewItem({super.key});
+  ScreenNewItem({super.key})
+      : itemForm = Item(title: "", quantity: 1, category: Category.fruit),
+        isEditing = false;
 
-  Map<String, dynamic> entered = {
-    "title": "",
-    "quantity": 1,
-    "category": Category.fruit,
-  };
+  ScreenNewItem.edit({super.key, required this.itemForm}) : isEditing = true;
+
+  bool isEditing;
+  Item itemForm;
 
   final _formKey = GlobalKey<FormState>();
 
   void _saveItem(BuildContext context) {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      Navigator.of(context).pop(
-        Item(
-          title: entered["title"],
-          quantity: entered["quantity"],
-          category: entered["category"],
-        ),
-      );
+      Navigator.of(context).pop(itemForm);
     }
   }
 
@@ -31,7 +26,7 @@ class ScreenNewItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("New item"),
+        title: Text(isEditing ? "Edit Item" : "New Item"),
       ),
       body: Form(
         key: _formKey,
@@ -40,6 +35,7 @@ class ScreenNewItem extends StatelessWidget {
           child: Column(
             children: [
               TextFormField(
+                initialValue: itemForm.title,
                 style: Theme.of(context).textTheme.bodyMedium,
                 maxLength: 30,
                 decoration: const InputDecoration(
@@ -51,7 +47,7 @@ class ScreenNewItem extends StatelessWidget {
                       value.trim().length <= 1) return "Title is too short";
                 },
                 onChanged: (value) {
-                  entered["title"] = value;
+                  itemForm.title = value;
                 },
               ),
               Row(
@@ -64,7 +60,7 @@ class ScreenNewItem extends StatelessWidget {
                       decoration: InputDecoration(
                         label: Text("Quantity"),
                       ),
-                      initialValue: '1',
+                      initialValue: itemForm.quantity.toString(),
                       validator: (value) {
                         if (value == null ||
                             value.isEmpty ||
@@ -74,16 +70,16 @@ class ScreenNewItem extends StatelessWidget {
                       },
                       onChanged: (value) {
                         dynamic temp = int.tryParse(value);
-                        entered["quantity"] = temp;
+                        itemForm.quantity = temp;
                       },
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: DropdownButtonFormField(
-                      value: Category.fruit,
+                      value: itemForm.category,
                       onChanged: (value) {
-                        entered["category"] = value;
+                        itemForm.category = value!;
                       },
                       decoration: InputDecoration(),
                       items: [
@@ -125,7 +121,7 @@ class ScreenNewItem extends StatelessWidget {
                     onPressed: () {
                       _saveItem(context);
                     },
-                    child: const Text("Add item"),
+                    child: Text(isEditing ? "Edit" : "Add item"),
                   )
                 ],
               )

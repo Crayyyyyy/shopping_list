@@ -36,4 +36,16 @@ class Item {
   int quantity;
   Color color;
   Category category;
+
+  set setTitle(String newTitle) {
+    title = newTitle;
+  }
+
+  set setQuantity(int newQuantity) {
+    quantity = newQuantity;
+  }
+
+  set setCategory(Category newCategory) {
+    category = newCategory;
+  }
 }
