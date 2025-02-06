@@ -4,39 +4,75 @@ import 'package:flutter/material.dart';
 import 'package:shopping_list/objects/item.dart';
 import 'package:http/http.dart' as http;
 
-class ScreenNewItem extends StatelessWidget {
-  ScreenNewItem({super.key})
+class ScreenFormItem extends StatefulWidget {
+  ScreenFormItem({super.key})
       : itemForm = Item(title: "", quantity: 1, category: Category.fruit),
         isEditing = false;
 
-  ScreenNewItem.edit({super.key, required this.itemForm}) : isEditing = true;
+  ScreenFormItem.edit({super.key, required this.itemForm}) : isEditing = true;
 
   bool isEditing;
   Item itemForm;
 
+  @override
+  State<ScreenFormItem> createState() => _ScreenFormItemState();
+}
+
+class _ScreenFormItemState extends State<ScreenFormItem> {
+  bool isSending = false;
   final _formKey = GlobalKey<FormState>();
 
   void _saveItem(BuildContext context) async {
+    setState(() {
+      isSending = true;
+    });
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+
       Uri url = Uri.https(
           'shopify-5803a-default-rtdb.europe-west1.firebasedatabase.app',
           "shopping-list.json");
 
-      await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: json.encode(
-          {
-            "title": itemForm.title,
-            "quantity": itemForm.quantity,
-            "name": itemForm.category.name,
-          },
-        ),
-      );
+      if (!widget.isEditing) {
+        try {
+          final response = await http.post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: json.encode(
+              {
+                "title": widget.itemForm.title,
+                "quantity": widget.itemForm.quantity,
+                "category": widget.itemForm.category.name,
+              },
+            ),
+          );
+          Map<String, dynamic> resDate = json.decode(response.body);
+          widget.itemForm.id = resDate["name"];
+        } catch (e) {
+          print('Error occured: $e');
+        }
+      } else {
+        try {
+          final response = await http.patch(
+            url,
+            body: jsonEncode(
+              {
+                '${widget.itemForm.id}': {
+                  "title": widget.itemForm.title,
+                  "quantity": widget.itemForm.quantity,
+                  "category": widget.itemForm.category.name,
+                }
+              },
+            ),
+            headers: {"Content-Type": "application/json"},
+          );
+        } catch (e) {
+          print("Error: $e");
+        }
+      }
 
       if (!context.mounted) return;
-      Navigator.of(context).pop(itemForm);
+      Navigator.of(context).pop(widget.itemForm);
     }
   }
 
@@ -46,7 +82,7 @@ class ScreenNewItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? "Edit Item" : "New Item"),
+        title: Text(widget.isEditing ? "Edit Item" : "New Item"),
       ),
       body: Form(
         key: _formKey,
@@ -55,7 +91,7 @@ class ScreenNewItem extends StatelessWidget {
           child: Column(
             children: [
               TextFormField(
-                initialValue: itemForm.title,
+                initialValue: widget.itemForm.title,
                 style: Theme.of(context).textTheme.bodyMedium,
                 maxLength: 30,
                 decoration: const InputDecoration(
@@ -67,7 +103,7 @@ class ScreenNewItem extends StatelessWidget {
                       value.trim().length <= 1) return "Title is too short";
                 },
                 onChanged: (value) {
-                  itemForm.title = value;
+                  widget.itemForm.title = value;
                 },
               ),
               Row(
@@ -80,7 +116,7 @@ class ScreenNewItem extends StatelessWidget {
                       decoration: InputDecoration(
                         label: Text("Quantity"),
                       ),
-                      initialValue: itemForm.quantity.toString(),
+                      initialValue: widget.itemForm.quantity.toString(),
                       validator: (value) {
                         if (value == null ||
                             value.isEmpty ||
@@ -89,17 +125,18 @@ class ScreenNewItem extends StatelessWidget {
                           return "Quantity must be positive number";
                       },
                       onChanged: (value) {
+                        if (value == null) return;
                         dynamic temp = int.tryParse(value);
-                        itemForm.quantity = temp;
+                        widget.itemForm.quantity = temp;
                       },
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: DropdownButtonFormField(
-                      value: itemForm.category,
+                      value: widget.itemForm.category,
                       onChanged: (value) {
-                        itemForm.category = value!;
+                        widget.itemForm.category = value!;
                       },
                       decoration: InputDecoration(),
                       items: [
@@ -131,17 +168,27 @@ class ScreenNewItem extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   TextButton(
-                    onPressed: () {
-                      _formKey.currentState!.reset();
-                    },
+                    onPressed: isSending
+                        ? null
+                        : () {
+                            _formKey.currentState!.reset();
+                          },
                     child: const Text("Reset"),
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
-                    onPressed: () {
-                      _saveItem(context);
-                    },
-                    child: Text(isEditing ? "Edit" : "Add item"),
+                    onPressed: isSending
+                        ? null
+                        : () {
+                            _saveItem(context);
+                          },
+                    child: isSending
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(),
+                          )
+                        : Text(widget.isEditing ? "Edit" : "Add item"),
                   )
                 ],
               )

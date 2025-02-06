@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shopping_list/objects/item.dart';
-import 'package:shopping_list/screens/new_item/screen_new_item.dart';
+import 'package:shopping_list/screens/new_item/screen_form_item.dart';
+import 'package:http/http.dart' as http;
 
 class ScreenHome extends StatefulWidget {
   ScreenHome({super.key});
@@ -10,32 +12,64 @@ class ScreenHome extends StatefulWidget {
 }
 
 class _ScreenHomeState extends State<ScreenHome> {
-  final List<Item> items = [
-    Item(title: "Pork", quantity: 4, category: Category.meat),
-    Item(title: "Chicken", quantity: 5, category: Category.meat),
-    Item(title: "Beef", quantity: 8, category: Category.meat),
-    Item(title: "Salmon", quantity: 13, category: Category.fish),
-    Item(title: "Tuna", quantity: 10, category: Category.fish),
-    Item(title: "Broccoli", quantity: 2, category: Category.vegetable),
-    Item(title: "Carrot", quantity: 2, category: Category.vegetable),
-    Item(title: "Potato", quantity: 1, category: Category.vegetable),
-    Item(title: "Tomato", quantity: 3, category: Category.vegetable),
-  ];
+  List<Item> items = [];
+  bool isLoading = true;
+  String? _error;
+  String urlFirebase =
+      'shopify-5803a-default-rtdb.europe-west1.firebasedatabase.app';
+
+  @override
+  void initState() {
+    super.initState();
+    fetchShoppingList();
+  }
+
+  Future<void> fetchShoppingList() async {
+    isLoading = true;
+    Uri url = Uri.https(urlFirebase, "shopping-list.json");
+    final response = await http.get(url);
+    if (response.statusCode >= 400) {
+      setState(() {
+        _error = "Error occured while fetching data";
+      });
+    }
+    if (response.body == "null") {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+
+    final Map<String, dynamic> extractedData = json.decode(response.body);
+    List<Item> temp = [];
+
+    for (var item in extractedData.entries) {
+      Item itemTemp = Item(
+        id: item.key,
+        title: item.value["title"],
+        quantity: item.value["quantity"],
+        category:
+            getEnumFromString(item.value?["category"]) ?? Category.vegetable,
+      );
+      temp.add(itemTemp);
+    }
+    setState(() {
+      isLoading = false;
+      items = temp;
+    });
+  }
 
   void routeCreateNewItem(BuildContext context) async {
-    Item? temp = await Navigator.of(context).push(
+    Item temp = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) {
-          return ScreenNewItem();
+          return ScreenFormItem();
         },
       ),
     );
-
-    if (temp != null) {
-      setState(() {
-        items.add(temp);
-      });
-    }
+    setState(() {
+      items.add(temp);
+    });
   }
 
   void routeEditItem(BuildContext context, Item item) async {
@@ -44,7 +78,7 @@ class _ScreenHomeState extends State<ScreenHome> {
     Item? temp = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) {
-          return ScreenNewItem.edit(itemForm: item);
+          return ScreenFormItem.edit(itemForm: item);
         },
       ),
     );
@@ -58,8 +92,61 @@ class _ScreenHomeState extends State<ScreenHome> {
     }
   }
 
+  void removeItem(Item item) async {
+    int index = items.indexOf(item);
+    setState(() {
+      items.remove(item);
+    });
+
+    Uri url = Uri.https(urlFirebase, 'shopping-list/${item.id}.json');
+    final response = await http.delete(url);
+
+    if (response.statusCode >= 400) {
+      setState(() {
+        items.insert(index, item);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    Widget loading = Center(
+      child: SizedBox(
+        width: 32,
+        height: 32,
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    Widget shoppingList = SingleChildScrollView(
+      child: Column(
+        children: [
+          for (Item item in items)
+            ItemTile(
+              item: item,
+              longPress: routeEditItem,
+              dismissed: removeItem,
+            ),
+        ],
+      ),
+    );
+
+    Widget errorMessage = Center(
+      child: Text(_error ?? "Some other error occured."),
+    );
+
+    Widget emptyList = Center(
+      child: Text("There are no items here"),
+    );
+
+    Widget content = _error == null
+        ? isLoading
+            ? loading
+            : items.isEmpty
+                ? emptyList
+                : shoppingList
+        : errorMessage;
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Shopify"),
@@ -72,31 +159,29 @@ class _ScreenHomeState extends State<ScreenHome> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            for (Item item in items)
-              ItemTile(
-                item: item,
-                longPress: routeEditItem,
-              ),
-          ],
-        ),
-      ),
+      body: content,
     );
   }
 }
 
 class ItemTile extends StatelessWidget {
-  const ItemTile({super.key, required this.item, required this.longPress});
+  const ItemTile(
+      {super.key,
+      required this.item,
+      required this.longPress,
+      required this.dismissed});
 
   final Function(BuildContext, Item) longPress;
+  final Function(Item item) dismissed;
 
   final Item item;
 
   @override
   Widget build(BuildContext context) {
     return Dismissible(
+      onDismissed: (direction) {
+        dismissed(item);
+      },
       background: Container(
         width: double.infinity,
         height: double.infinity,
@@ -120,6 +205,9 @@ class ItemTile extends StatelessWidget {
         onLongPress: () {
           longPress(context, item);
         },
+        onTap: () {
+          print(item.id);
+        },
         leading: Container(
           width: 20,
           height: 20,
@@ -131,7 +219,7 @@ class ItemTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        trailing: Text('${item.quantity} x'),
+        trailing: Text('${item.quantity}x'),
       ),
     );
   }

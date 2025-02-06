@@ -12,6 +12,15 @@ enum Category {
   grain,
 }
 
+Category? getEnumFromString(String categoryName) {
+  for (Category category in Category.values) {
+    if (category.toString().split('.').last == categoryName) {
+      return category;
+    }
+  }
+  return null;
+}
+
 Map<Category, Color> categoryColors = {
   Category.meat: Colors.red,
   Category.dairy: Colors.blue,
@@ -29,13 +38,19 @@ class Item {
     required this.title,
     required this.quantity,
     required this.category,
+    this.id,
     this.color = Colors.black,
   });
 
   String title;
+  String? id;
   int quantity;
   Color color;
   Category category;
+
+  set setID(String newID) {
+    id = newID;
+  }
 
   set setTitle(String newTitle) {
     title = newTitle;
