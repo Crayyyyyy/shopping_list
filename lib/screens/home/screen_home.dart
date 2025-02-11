@@ -136,7 +136,57 @@ class _ScreenHomeState extends State<ScreenHome> {
     );
 
     Widget emptyList = Center(
-      child: Text("There are no items here"),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.sentiment_neutral_rounded,
+            size: 96,
+            color: Theme.of(context)
+                .colorScheme
+                .onPrimaryContainer
+                .withValues(alpha: 0.5),
+          ),
+          Text(
+            "No items in shopping list",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onPrimaryContainer
+                    .withOpacity(0.4),
+                fontWeight: FontWeight.bold),
+          ),
+          Text(
+            "Tap on '+' in top right to add an item.",
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimaryContainer
+                      .withOpacity(0.4),
+                ),
+          ),
+          SizedBox(
+            height: 50,
+          ),
+        ],
+      ),
+    );
+
+    Widget floatingActionButton = IconButton(
+      onPressed: () {
+        routeCreateNewItem(context);
+      },
+      icon: Container(
+        padding: EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(50),
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        child: Icon(
+          Icons.add,
+          size: 48,
+        ),
+      ),
     );
 
     Widget content = _error == null
@@ -148,16 +198,9 @@ class _ScreenHomeState extends State<ScreenHome> {
         : errorMessage;
 
     return Scaffold(
+      floatingActionButton: floatingActionButton,
       appBar: AppBar(
         title: Text("Shopify"),
-        actions: [
-          IconButton(
-            onPressed: () {
-              routeCreateNewItem(context);
-            },
-            icon: Icon(Icons.add),
-          ),
-        ],
       ),
       body: content,
     );
